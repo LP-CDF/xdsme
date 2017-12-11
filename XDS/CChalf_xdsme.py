@@ -207,7 +207,7 @@ def CalculateXDSHighRes(xdsdata, CChalf=0.3):
     
 def CutXDSByCChalf(XDS_obj,filename="", run_dir="./", verbose=1, CChalf=0.3):
     '''Analyze XDS data and cut the data 
-    to a cut off close and > to defined CC1/2'''
+    to a cut off close to a defined CC1/2'''
     from XDS import run_xdsconv
     from pointless import run_aimless
     global RUN_XDSCONV, RUN_AIMLESS
