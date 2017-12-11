@@ -21,8 +21,60 @@ except :
     raise ImportError('''%s
              Missing module scipy needed for option --CChalf
              %s'''%('='*47,'='*47))
-    
+ 
 ###############################################################################
+class ExtractXDSCChalf:
+    ''' '''
+    def __init__(self, filename="", run_dir="",
+                 verbose=False, raiseErrors=True):
+        """ Extract relevant data from resum_scaling function in xupy
+        """
+        from xupy import resum_scaling
+        self.resolution= []
+        self.CChalf = []
+        self.s=[]
+        self.vector=[]
+        self.HighResCChalf=float()
+        self.HighRes=float()
+        
+        if not run_dir:
+            run_dir = "./"
+        self.run_dir = run_dir
+        #
+        full_filename = os.path.join(self.run_dir, filename)
+        #
+        if filename:
+            try:
+                fp = open(full_filename, "r")
+                self.lp = fp.read()
+                fp.close()
+            except:
+                raise IOError, "Can't read file: %s" % full_filename
+        else:
+            self.lp = ""
+
+        if full_filename.count("CORRECT.LP"):
+            self.s = resum_scaling(lpf=os.path.join(run_dir,"CORRECT.LP"))
+            self.get_XDS_CChalf()
+        else:
+            if filename:
+                raise IOError, "Don't know how to parse file: %s" % \
+                               full_filename
+                               
+    def get_XDS_CChalf(self):
+        if not self.s:
+            print "\nERROR while running CORRECT"
+            sys.exit()
+        data=(self.s.last_table).splitlines()[3:-1] #discard total
+        data=[ map(str, l.split()[0:15]) for l in data ]
+        for i in data: 
+            self.resolution.append(float(i[0]))
+            self.CChalf.append(float(i[10].strip("*"))/100.)
+            self.vector.append(1/(float(i[0]))**2)
+        self.HighResCChalf=self.CChalf[-1]
+        self.HighRes=self.resolution[-1]
+        del self.s
+
 class AimlessLogParser:
     """ A Parser for log file from AIMLESS.
     """
@@ -66,11 +118,9 @@ class AimlessLogParser:
         sp2 = self.lp.index("                   CCanom    Nanom   RCRanom   CC1/2   NCC1/2   Rsplit     CCfit CCanomfit", sp1)
         _table = self.lp[sp1:sp2].splitlines()[1:-2]
         _table = [ map(float, l.split()[1:]) for l in _table ]
-        resolution, CChalf=[], []
         for l in _table:
             self.resolution.append(l[0])
             self.CChalf.append(l[5])
-        return resolution, CChalf
 
 def func(x,d0,r):
     '''x and y are lists of same size
@@ -88,7 +138,7 @@ def tanh_fit(Ex, Ey):
        r is the steepness of the falloff
     '''
     from scipy.optimize import curve_fit
-#    from pylab import *
+#    from pylab import plot
     
     #initializing parameters
     halffo=(max(Ey)-min(Ey))/2.
@@ -135,17 +185,8 @@ def EstimateCC_NewHighRes(cutoff, d0, r, Ey):
 
     for val in CC_calc:
         delta.append(abs(val-cutoff))
-    HighRes=sqrt(1/x[delta.index(min(delta))])
-    CalculatedCutoff=CC_calc[delta.index(min(delta))]
-#==============================================================================
-#     tolerance= linspace(0.005,0.03,6).tolist()  
-#     for val in CC_calc:
-#         if True in [cutoff<=val<cutoff+i for i in tolerance]:
-#                 HighRes=sqrt(1/x[CC_calc.index(val)])
-#                 CalculatedCutoff=val
-#         else: continue
-#==============================================================================
-          
+    HighRes=round(sqrt(1/x[delta.index(min(delta))]),2)
+    CalculatedCutoff=CC_calc[delta.index(min(delta))]          
     print '''   %s
    ->  Suggested New High Resolution Limit: %.2f A for CC1/2= %.2f <-
    %s
@@ -158,9 +199,59 @@ def CalculateAimlessHighRes(filename, run_dir="./", verbose=1, CChalf=0.3):
     fit=tanh_fit(aimlessdata.resolution,aimlessdata.CChalf)
     Newh=EstimateCC_NewHighRes(CChalf, fit[0], fit[1], aimlessdata.CChalf)
     return Newh
+
+def CalculateXDSHighRes(xdsdata, CChalf=0.3): 
+    fit=tanh_fit(xdsdata.vector,xdsdata.CChalf)
+    Newh=EstimateCC_NewHighRes(CChalf, fit[0], fit[1], xdsdata.CChalf)
+    return Newh
     
+def CutXDSByCChalf(XDS_obj,filename="", run_dir="./", verbose=1, CChalf=0.3):
+    '''Analyze XDS data and cut the data 
+    to a cut off close and > to defined CC1/2'''
+    from XDS import run_xdsconv
+    from pointless import run_aimless
+    global RUN_XDSCONV, RUN_AIMLESS
+
+    (l, h), spgn  = XDS_obj.run_pre_correct(cutres=False)
+    XDS_obj.run_correct((l, h), spgn) #Cycle 1
+    CChalf_data=ExtractXDSCChalf("CORRECT.LP", XDS_obj.run_dir, verbose)         
+    Newh=CalculateXDSHighRes(CChalf_data, CChalf=CChalf)
+
+    Cycle, MaxCycle =2,5
+    if Newh is not None:
+        print "Cycle %s of a maximum of %s"%(Cycle,MaxCycle)
+        XDS_obj.run_correct((l, Newh), spgn) #Cycle 2
+        Cycle+=1
+        CChalf_data=ExtractXDSCChalf("CORRECT.LP", XDS_obj.run_dir)
+#        while CChalf_data.HighResCChalf < CChalf and Cycle < MaxCycle :
+        while Cycle <= MaxCycle :
+            print "Cycle %s of a maximum of %s"%(Cycle,MaxCycle)
+            oldHighRes=Newh
+            Newh=CalculateXDSHighRes(CChalf_data, CChalf=CChalf)
+            if oldHighRes == Newh:
+                print "==>  CC1/2 High Resolution limit converged running AIMLESS and exporting to CCP4 format  <=="
+                run_aimless(XDS_obj.run_dir)
+                run_xdsconv(XDS_obj.run_dir)
+                break
+            elif Cycle==MaxCycle:
+                print "==>  Maximum number of cycles reached, running last cycle, AIMLESS and exporting to CCP4 format  <=="
+                RUN_AIMLESS=True
+                RUN_XDSCONV=True
+                XDS_obj.run_correct((l, Newh), spgn)
+                break
+            else:
+                XDS_obj.run_correct((l, Newh), spgn)
+                Cycle+=1
+    else:
+        print "==>   Data processed using full resolution range --> exporting to CCP4 format<=="
+        run_xdsconv(XDS_obj.run_dir)
+#                newrun.run_correct((l, h), spgn)
+        
 if __name__ == "__main__":   
 #    inputfile=sys.argv[len(sys.argv)-1]
-    res = AimlessLogParser(filename="puck7_10_1_aimless.log", run_dir=".", verbose=1)
-    res2=tanh_fit(res.resolution,res.CChalf)
+#    res = AimlessLogParser(filename="puck1_3_1_aimless.log", run_dir="/home/lpecqueur/XDSME_TEST/xdsme_TEST", verbose=1)
+#    res2=tanh_fit(res.resolution,res.CChalf)
+#    EstimateCC_NewHighRes(0.30, res2[0], res2[1], res.CChalf)
+    res=ExtractXDSCChalf(filename="CORRECT.LP", run_dir="/home/XXXX/XDSME_TEST/xdsme_TEST", verbose=1)
+    res2=tanh_fit(res.vector,res.CChalf)
     EstimateCC_NewHighRes(0.30, res2[0], res2[1], res.CChalf)

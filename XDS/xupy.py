@@ -26,7 +26,7 @@ __copyright__ = "Copyright (c) 2006-2017  Pierre Legrand"
 __license__ = "New BSD http://www.opensource.org/licenses/bsd-license.php"
 
 
-# Environemantal variable XDS_PATH, if set, defines the place where the xds
+# Environmental variable XDS_PATH, if set, defines the place where the xds
 # executables will be searched. The parallelized execs (xds_par, xscale_par)
 # will be used be defaults.
 
@@ -1195,7 +1195,7 @@ def run_xscale(files, hklout, lattice, Dir=None,
 
 def guess_imageType(image_name):
     """Return a the image detector type and compress type.
-       Do not handel swaping..."""
+       Do not handle swapping..."""
     image = open(image_name,"r")
     head = image.read(9000)
     image.close()

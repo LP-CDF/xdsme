@@ -38,7 +38,7 @@ from xupy import XParam, xdsInp2Param, opWriteCl, \
                  get_BravaisToSpgs, get_number_of_processors, \
                  EXCLUDE_ICE_RING, gxparm2xpar, getProfilRefPar
 import XIO
-from CChalf_xdsme import CalculateAimlessHighRes
+from CChalf_xdsme import ExtractXDSCChalf, CalculateXDSHighRes, CutXDSByCChalf
                              
 
 PROGNAME = os.path.split(sys.argv[0])[1]
@@ -664,6 +664,7 @@ class XDSLogParser:
         prp += "  Total number of measures:             %(Total)d\n"
         if self.verbose:
             print prp % rdi
+        print 
         return rdi, prp
 
     def get_proper_resolition_range(self, res_table):
@@ -1622,8 +1623,8 @@ if __name__ == "__main__":
     OPTIMIZE = 0
     INVERT = False
     XDS_PATH = ""
-    RUN_XDSCONV = True
-    RUN_AIMLESS = True
+    RUN_XDSCONV = True #LUDO TO CHANGE BACK TO TRUE
+    RUN_AIMLESS = True #LUDO TO CHANGE BACK TO TRUE
     CChalf = None
 
     for o, a in opts:
@@ -1670,6 +1671,9 @@ if __name__ == "__main__":
             LAST_FRAME = int(a)
         if o in ("--CChalf"):
             CChalf = float(a)
+        if o in ("-r", "--high-resolution") and o in ("--CChalf"):
+            print '''Inconsistent options --CChalf and -r, please use either -r or --CChalf'''
+            sys.exit()
         if o in ("-O", "--oscillation"):
             OSCILLATION = float(a)
         if o in ("-M", "--orientation-matrix"):
@@ -1939,18 +1943,9 @@ if __name__ == "__main__":
         R4 = newrun.run_integrate(collect.imageRanges)
     if STEP <= 5:
         if CChalf is not None:
-            (l, h), spgn  = newrun.run_pre_correct(cutres=False)
+            RUN_AIMLESS=False
             RUN_XDSCONV=False
-            newrun.run_correct((l, h), spgn)
-            Newh=CalculateAimlessHighRes(filename="%s_aimless.log"%_coll.prefix, \
-                                         run_dir=newrun.run_dir, verbose=1, CChalf=CChalf)
-            RUN_XDSCONV=True
-            if Newh is not None:
-                newrun.run_correct((l, Newh), spgn)
-            else:
-                print "==>  Processed data using full resolution range  <=="
-                run_xdsconv(newrun.run_dir)
-#                newrun.run_correct((l, h), spgn)
+            CutXDSByCChalf(newrun, filename="CORRECT.LP", run_dir=newrun.run_dir, verbose=1, CChalf=CChalf)
         else:
             (l, h), spgn  = newrun.run_pre_correct(cutres=True)
             newrun.run_correct((l, h), spgn)        
