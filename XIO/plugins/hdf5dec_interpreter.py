@@ -117,3 +117,22 @@ class Interpreter:
             pass
         self.raw_head_dict.update({'MESSAGE': '', 'TWOTHETA': '0', 'HEADER_BYTES':0, 'OSC_AXIS': "phi" })
         return self.raw_head_dict
+
+    def iterate_children(self, node, nodeDict={}):
+        """ iterate over the children of a neXus node """
+        if node.type() == self.groupType:
+            for kid in node.children():
+                nodeDict = self.iterate_children(kid, nodeDict)
+        else:
+            nodeDict[node.path()] = node.value()
+        return nodeDict
+
+    def getRawHeadDictDectris(self, raw_head, groupNode):
+        "Intepret the ascii structure of the asdc image header."
+        self.groupType = groupNode
+        self.raw_head_dict = self.iterate_children(raw_head)
+        #print neXus_string_tree
+        # First version. Works only with local bioxsoft installation.
+        self.raw_head_dict.update({'MESSAGE': '', 'TWOTHETA': '0',
+                                   'HEADER_BYTES':0, 'OSC_AXIS': "phi" }) #
+        return self.raw_head_dict

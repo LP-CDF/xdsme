@@ -21,6 +21,7 @@ __license__ = "New BSD License www.opensource.org/licenses/bsd-license.php"
 # Standard modules
 import os
 import sys
+import platform
 import struct
 import re
 import time
@@ -28,10 +29,21 @@ import time
 PLUGIN_DIR_NAME = "plugins"
 VERBOSE = 0
 DIRNAME = os.path.dirname(__file__)
+USE_ALBULA = False
 
-#
-if os.path.isdir(os.path.join(DIRNAME, "../3rdparty/pyfive")):
-    HDF5_LIB_PATH = os.path.join(DIRNAME, "../3rdparty/pyfive")
+if  sys.version_info < (2, 7):
+    if "ALBULA_PYTHON_PATH" in os.environ.keys():
+        HDF5_LIB_PATH = os.getenv("ALBULA_PYTHON_PATH")
+        USE_ALBULA = True
+    else:
+        raise Exception('''
+        python version %s < 2.7.x not compatible with pyfive
+        You need to have ALBULA installed and define the variable
+        ALBULA_PYTHON_PATH=whereisALBULA/dectris/albula/3.2/python
+        '''%(platform.python_version()))
+else:
+    if os.path.isdir(os.path.join(DIRNAME, "../3rdparty/pyfive")):
+        HDF5_LIB_PATH = os.path.join(DIRNAME, "../3rdparty/pyfive")
 
 # Defines General regexp for the complete image names:
 # dirPath + imageName + externalCompression
@@ -370,22 +382,38 @@ class Image:
             interpreterClass = importName("plugins.%s_interpreter" % \
                                        self.type, "Interpreter")
         if self.type == "hdf5dec":
-            import pyfive
-            try:
-                self.rawHead = pyfive.File(self.fileName)
-            except ImportError:
-                print "\nThe master_file could not be interpreted."
-                raise SystemExit
-
+            if USE_ALBULA is True:
+                sys.path.insert(0, HDF5_LIB_PATH)
+                try:
+                    import dectris.albula as dec
+                except ImportError:
+                    print "\nThe DECTRIS ALBULA API could not be loaded."
+                else:
+                    h5cont = dec.DImageSeries(self.fileName)
+                    neXus_tree = h5cont.neXus()
+                    neXus_root = neXus_tree.root()
+            else:
+                import pyfive
+                try:
+                    self.rawHead = pyfive.File(self.fileName)
+                    
+                except ImportError:
+                    print "\nThe master_file could not be interpreted."
+                    raise SystemExit
+#
         if not interpreterClass:
-            raise XIOError, "Can't import %s interperter" % (self.type)
+            raise XIOError, "Can't import %s interpreter" % (self.type)
 
         # Rules are serial number (or other identifier) based rules
         # To be added
         # Special = interpreter.SpecialRules
         #
         self.interpreter = interpreterClass()
-        self.RawHeadDict = self.interpreter.getRawHeadDict(self.rawHead)
+        if self.type == "hdf5dec" and USE_ALBULA is True:
+            self.RawHeadDict = self.interpreter.getRawHeadDictDectris(neXus_root,
+                                                                      dec.DNeXusNode.GROUP)            
+        else:
+            self.RawHeadDict = self.interpreter.getRawHeadDict(self.rawHead)
         #VERBOSE = True
         # Default value
         self.header['SensorThickness'] = 0.0
