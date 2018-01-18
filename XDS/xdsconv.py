@@ -565,7 +565,7 @@ test_set, test_flag = "test", 1
 """
 
 cad_script = """LABIN FILE 1 ALL
-DWAVE FILE 1 %(ID)s d%(ID)s %(wavelength).5f\nEND"""
+DWAVE FILE 1 1 %(wavelength).5f\nEND"""
 cad2_script = """LABIN FILE 1 ALL
 LABIN FILE 2 %(cad_ano)s
 DWAVE FILE 2 %(ID)s d%(ID)s %(wavelength).5f\nEND"""
