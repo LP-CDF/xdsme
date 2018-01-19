@@ -12,6 +12,6 @@ ctruncate -hklin $1 \
           -hklout ${PREFIX}_ctruncate.mtz \
           -colin '/*/*/[IMEAN,SIGIMEAN]' \
           -colano  '/*/*/[I(+),SIGI(+),I(-),SIGI(-)]' \
-          |tee Truncate.log
+          |tee ${PREFIX}_truncate.log
 }
 run_ctruncate $1
