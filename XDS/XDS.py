@@ -1623,8 +1623,8 @@ if __name__ == "__main__":
     OPTIMIZE = 0
     INVERT = False
     XDS_PATH = ""
-    RUN_XDSCONV = True #LUDO TO CHANGE BACK TO TRUE
-    RUN_AIMLESS = True #LUDO TO CHANGE BACK TO TRUE
+    RUN_XDSCONV = True
+    RUN_AIMLESS = True
     CChalf = None
 
     for o, a in opts:
