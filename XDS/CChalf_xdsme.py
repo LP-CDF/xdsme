@@ -243,7 +243,7 @@ def CutXDSByCChalf(XDS_obj,filename="", run_dir="./", verbose=1, CChalf=0.3):
                 XDS_obj.run_correct((l, Newh), spgn)
                 Cycle+=1
     else:
-        print "==>   Data processed using full resolution range --> exporting to CCP4 format<=="
+        print "==>   Data processed using full resolution range --> exporting to CCP4 format   <=="
         run_xdsconv(XDS_obj.run_dir)
 #                newrun.run_correct((l, h), spgn)
         
