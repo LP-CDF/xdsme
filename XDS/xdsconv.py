@@ -50,6 +50,7 @@ usage   = """
 	 -free, or -free=
 		Generate the free reflection set with the given percent.
 		-free 10 or -free=10 will generate a 10 percent free reflection set.
+            WARNING: option not compatible with giving a reference free set
 		
         free_hkl_to_inherit: is a reflection file containing a previously
                  selected set of free reflection to be kept in the newly
@@ -76,7 +77,7 @@ usage   = """
           xdsconv.py solve XDS_ASCII.HKL Se 12
           xdsconv.py 12 Se phaser XDS_ASCII.HKL
           xdsconv.py XDS_ASCII.HKL ccp4 -n FreeR_reference.mtz
-          xdsconv.py XDS_ASCII.HKL ccp4 -n FreeR_reference.mtz -free 5
+          xdsconv.py XDS_ASCII.HKL ccp4 -n -free 5
           xdsconv.py XDS_ASCII.HKL ccp4 Se 12 -l=peak FreeR_reference.mtz
 """
 
@@ -1316,7 +1317,7 @@ if __name__ == '__main__':
     XC = Dumy()
     XC.file_type = "XDS_ASCII"
     XC.friedel_out = ""
-    XC.free_out = "GENERATE_FRACTION_OF_TEST_REFLECTIONS=%3.2f\n"%(__freefrac)
+    XC.free_out = "GENERATE_FRACTION_OF_TEST_REFLECTIONS=%3.3f\n"%(__freefrac)
     XC.free_lbl = "FreeR_flag"
     XC.free_code = "X"
     XC.merge_out = ""
@@ -1333,7 +1334,7 @@ if __name__ == '__main__':
     if __force_merge: XC.merge_out = "TRUE"
     if __force_unmerge: XC.merge_out = "FALSE"
     if __force_free:
-        XC.free_out = "GENERATE_FRACTION_OF_TEST_REFLECTIONS=%3.2f\n"%(__freefrac)
+        XC.free_out = "GENERATE_FRACTION_OF_TEST_REFLECTIONS=%3.3f\n"%(__freefrac)
         XC.free_lbl = "FreeR_flag"
         XC.free_code = "X"
     if __force_no_free:
