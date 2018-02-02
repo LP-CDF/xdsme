@@ -111,7 +111,7 @@ USAGE = """
 
     -O,  --oscillation
          Set frame oscillation range in degree.
-         For example: -c 0.5
+         For example: -O 0.5
 
     -n, --nthreads
          Set the maximum number of threads to use. Default is to use the
