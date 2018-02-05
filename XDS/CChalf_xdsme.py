@@ -16,10 +16,10 @@ except ImportError:
              Missing module numpy needed for option --CChalf
              %s'''%('='*47,'='*47))
 try :
-    import scipy
+    from scipy import optimize
 except :
     raise ImportError('''%s
-             Missing module scipy needed for option --CChalf
+             Missing module scipy.optimize needed for option --CChalf
              %s'''%('='*47,'='*47))
  
 ###############################################################################
