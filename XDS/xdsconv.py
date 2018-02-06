@@ -569,7 +569,7 @@ cad_script = """LABIN FILE 1 ALL
 DWAVE FILE 1 1 %(wavelength).5f\nEND"""
 cad2_script = """LABIN FILE 1 ALL
 LABIN FILE 2 %(cad_ano)s
-DWAVE FILE 2 %(ID)s d%(ID)s %(wavelength).5f\nEND"""
+DWAVE FILE 2 1 %(wavelength).5f\nEND"""
 
 cad_crank_script = """
 cad HKLIN1 temp.mtz HKLOUT output_file_name.mtz<<EOF
