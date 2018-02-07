@@ -444,8 +444,8 @@ class XParam(Param):
         return xdsInp2Param(inp_str="%s" % self)
 
     def xds_parse(self):
-        """ Parser to transforme, if possible, string variables to:
-        numerical variable, or tupple of numerical or string"""
+        """ Parser to transform, if possible, string variables to:
+        numerical variables, or tupple of numerical or string"""
         def _parse(keyStr):
             fmt_str = "'%s',"
             fmt_num = "%s,"

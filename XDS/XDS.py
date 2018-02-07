@@ -38,7 +38,7 @@ from xupy import XParam, xdsInp2Param, opWriteCl, \
                  get_BravaisToSpgs, get_number_of_processors, \
                  EXCLUDE_ICE_RING, gxparm2xpar, getProfilRefPar
 import XIO
-from CChalf_xdsme import ExtractXDSCChalf, CalculateXDSHighRes, CutXDSByCChalf
+from CChalf_xdsme import CutXDSByCChalf
                              
 
 PROGNAME = os.path.split(sys.argv[0])[1]
