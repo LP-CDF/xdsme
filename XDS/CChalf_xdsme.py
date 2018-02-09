@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Sep 22 19:42:16 2017
 
-@author: lpecqueur
-"""
+__version__ = "0.1.0"
+__author__ = "Pecqueur Ludovic"
+__date__ = "09-02-2018"
+__copyright__ = "Copyright (c) 2017-2018"
+__license__ = "New BSD http://www.opensource.org/licenses/bsd-license.php"
+
 
 import sys
 import os
