@@ -192,8 +192,7 @@ def EstimateCC_NewHighRes(cutoff, d0, r, Ey):
     print '''   %s
    ->  Suggested New High Resolution Limit: %.2f A for CC1/2= %.2f <-
    %s
-   ''' %('='*66,HighRes, CalculatedCutoff,'='*66)
-#    del y    
+   ''' %('='*66,HighRes, CalculatedCutoff,'='*66)   
     return HighRes
 
 def CalculateAimlessHighRes(filename, run_dir="./", verbose=1, CChalf=0.3):
@@ -225,12 +224,11 @@ def CutXDSByCChalf(XDS_obj,filename="", run_dir="./", verbose=1, CChalf=0.3):
         XDS_obj.run_correct((l, Newh), spgn) #Cycle 2
         Cycle+=1
         CChalf_data=ExtractXDSCChalf("CORRECT.LP", XDS_obj.run_dir)
-#        while CChalf_data.HighResCChalf < CChalf and Cycle < MaxCycle :
         while Cycle <= MaxCycle :
             print "Cycle %s of a maximum of %s"%(Cycle,MaxCycle)
             oldHighRes=Newh
             Newh=CalculateXDSHighRes(CChalf_data, CChalf=CChalf)
-            if oldHighRes == Newh:
+            if oldHighRes == Newh and Newh != None:
                 print "==>  CC1/2 High Resolution limit converged running AIMLESS and exporting to CCP4 format  <=="
                 run_aimless(XDS_obj.run_dir)
                 run_xdsconv(XDS_obj.run_dir)
@@ -240,6 +238,11 @@ def CutXDSByCChalf(XDS_obj,filename="", run_dir="./", verbose=1, CChalf=0.3):
                 RUN_AIMLESS=True
                 RUN_XDSCONV=True
                 XDS_obj.run_correct((l, Newh), spgn)
+                break
+            elif Newh == None:
+                print "==>   Processed data using High Resolution limit of %.2f A, running AIMLESS and exporting to CCP4 format  <=="%oldHighRes
+                run_aimless(XDS_obj.run_dir)                
+                run_xdsconv(XDS_obj.run_dir)
                 break
             else:
                 XDS_obj.run_correct((l, Newh), spgn)
