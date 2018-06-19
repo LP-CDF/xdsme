@@ -54,10 +54,11 @@ fi
 
 function run_aP_scale() {
 if [ ${HKLIN} = "XDS_ASCII.HKL" ]; then
-	aP_scale -mtz ${BASEDIR}/${PREFIX}_pointless.mtz -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} autoPROC_ScaleWithXscale=no
+	command="aP_scale -mtz ${BASEDIR}/${PREFIX}_pointless.mtz -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} autoPROC_ScaleWithXscale=no"
 else
-	aP_scale -mtz ${BASEDIR}/${HKLIN} -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} autoPROC_ScaleWithXscale=no
+	command="aP_scale -mtz ${BASEDIR}/${HKLIN} -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} autoPROC_ScaleWithXscale=no"
 fi
+eval ${command}
 }
 
 cd ${OUTPUTDIR}
@@ -79,4 +80,7 @@ Kingdom: Global Phasing Ltd."
 
 '''
 cd ${BASEDIR}
+echo "command line was: 
+${command}
+"
 
