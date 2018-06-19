@@ -21,7 +21,6 @@ import os
 import sys
 import re
 
-
 if sys.version_info <= (2, 4, 0):
     from popen2 import Popen3
 else:
@@ -1552,7 +1551,7 @@ def CheckLicenceisValid():
 	licenceday,licencemonth,licenceyear=ExpiryDate[0],ExpiryDate[1],ExpiryDate[2]
 	licenceExpiryDate=datetime.datetime.strptime('%s-%s-%s'%(licenceday,licencemonth,licenceyear), '%d-%b-%Y')
 	today=datetime.datetime.today()
-	if today > licenceExpiryDate:
+	if today.date() > licenceExpiryDate.date():
 		return False
 	else:
 		return True
