@@ -54,7 +54,7 @@ fi
 
 function run_aP_scale() {
 if [ ${HKLIN} = "XDS_ASCII.HKL" ]; then
-	command="aP_scale -mtz ${BASEDIR}/${PREFIX}_pointless.mtz -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} autoPROC_ScaleWithXscale=no"
+	command="aP_scale -mtz ${BASEDIR}/${PREFIX}_pointless.mtz -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} -M HighResCutOnCChalf autoPROC_ScaleWithXscale=no"
 else
 	command="aP_scale -mtz ${BASEDIR}/${HKLIN} -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} autoPROC_ScaleWithXscale=no"
 fi
