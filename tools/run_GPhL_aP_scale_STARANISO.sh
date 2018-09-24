@@ -8,6 +8,11 @@ echo "
 This script should be used on uncut, UNMERGED but scaled datasets ie full resolution range using XDS_ASCII.HKL or XXXXX_pointless.mtz as input
 "
 
+CMD="aP_scale"
+# command -v will return >0 when the $CMD is not found
+command -v $CMD >/dev/null 2>&1 || { echo "$CMD command not found. check autoPROC variables are in PATH"; exit 1; }
+
+
 ######################## IF XDS_ASCII.HKL as input #######################
 if [ $# -eq 0 ]; then
   HKLIN=XDS_ASCII.HKL
@@ -29,14 +34,14 @@ function get_prefix {
    echo ${c%_*.*}                                                       
 }
 
-if [ ${HKLIN} = "XDS_ASCII.HKL" ]; then
+if [ ${HKLIN: -4} = ".HKL" ]; then
 	PREFIX=$(get_prefix ${HKLIN})
 	if [ ! -f ${PREFIX}_pointless.mtz ]; then
 		pointless -copy XDSIN ${HKLIN} HKLOUT ${PREFIX}_pointless.mtz |tee ${PREFIX}_pointless.log
 	else
 		echo "
 WARNING:
-File ${PREFIX}_pointless.mtz exists skipping XDS_ASCII.HKL file conversion with POINTLESS
+File ${PREFIX}_pointless.mtz exists skipping ${HKLIN} file conversion with POINTLESS
 		"
 	fi
 else
@@ -53,7 +58,7 @@ fi
 ##########################################################################
 
 function run_aP_scale() {
-if [ ${HKLIN} = "XDS_ASCII.HKL" ]; then
+if [ ${HKLIN: -4} = ".HKL" ]; then
 	command="aP_scale -mtz ${BASEDIR}/${PREFIX}_pointless.mtz -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} -M HighResCutOnCChalf autoPROC_ScaleWithXscale=no"
 else
 	command="aP_scale -mtz ${BASEDIR}/${HKLIN} -P ${PREFIX} ${PREFIX} ${PREFIX} -id ${PREFIX} -M HighResCutOnCChalf autoPROC_ScaleWithXscale=no"
