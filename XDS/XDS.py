@@ -1579,30 +1579,29 @@ def select_strategy(idxref_results, xds_par):
     xds_par["SPACE_GROUP_NUMBER"] = sel_spgn
     return xds_par
 
-def CheckLicenceisValid():
-	import datetime, subprocess
-	pattern=re.compile("[0-9]{2}-[a-zA-Z]{3}-[0-9]{4}")
-	p = subprocess.Popen('xds',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-	output,errors = p.communicate()
-	log=map(str, output.split(' '))
-	licence=re.findall(pattern, output)
-	ExpiryDate=licence[-1].split('-')
-	licenceday,licencemonth,licenceyear=ExpiryDate[0],ExpiryDate[1],ExpiryDate[2]
-	licenceExpiryDate=datetime.datetime.strptime('%s-%s-%s'%(licenceday,licencemonth,licenceyear), '%d-%b-%Y')
-	today=datetime.datetime.today()
-	if today.date() > licenceExpiryDate.date():
-		return False
-	else:
-		return True
+#def CheckLicenceisValid():
+#	import datetime, subprocess
+#	pattern=re.compile("[0-9]{2}-[a-zA-Z]{3}-[0-9]{4}")
+#	p = subprocess.Popen('xds',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+#	output,errors = p.communicate()
+#	licence=re.findall(pattern, output)
+#	ExpiryDate=licence[-1].split('-')
+#	licenceday,licencemonth,licenceyear=ExpiryDate[0],ExpiryDate[1],ExpiryDate[2]
+#	licenceExpiryDate=datetime.datetime.strptime('%s-%s-%s'%(licenceday,licencemonth,licenceyear), '%d-%b-%Y')
+#	today=datetime.datetime.today()
+#	if today.date() > licenceExpiryDate.date():
+#		return False
+#	else:
+#		return True
 
 if __name__ == "__main__":
 
     import getopt
-    if CheckLicenceisValid() is False:
-        print '''
-WARNING: XDS licence has expired, please update XDS
-		'''
-        sys.exit()
+#    if CheckLicenceisValid() is False:
+#        print '''
+#WARNING: XDS licence has expired, please update XDS
+#		'''
+#        sys.exit()
 
     short_opt =  "123456aAbBc:d:E:f:F:i:IL:O:M:n:p:s:Sr:R:x:y:vw:WSFX"
     long_opt = ["anomal",
