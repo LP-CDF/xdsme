@@ -43,20 +43,29 @@ fileHandler = None
 
 def prnt(msg, lvl=INFO, timing=False):
     "Fonction used to replace all print"
+    prnt_msg = msg
+    if lvl == WARNING:
+        prnt_msg = COLOR_W + " WARNING: " + msg + END_COLOR + "\n"
+        prnt_func = prntLog.warning
+    elif lvl == ERROR:
+        prnt_msg = COLOR_E + "!ERROR! " + msg + END_COLOR +  "\n"
+        prnt_func = prntLog.error
+    elif lvl == CRITICAL:
+        prnt_msg = COLOR_C + "!CRITICAL! " + msg + END_COLOR + "\n"
+        prnt_func = prntLog.critical
+    elif lvl == INFO:
+        prnt_func = prntLog.info
+    elif lvl == DEBUT:
+        prnt_func = prntLog.debug
+    if not fileHandler:
+        print(prnt_msg)
+        return
     if timing and fileHandler:
         fileHandler.setFormatter(logFormatter)
     elif fileHandler:
         fileHandler.setFormatter(cslFormatter)
-    if lvl == INFO:
-        prntLog.info(msg)
-    elif lvl == DEBUG: 
-        prntLog.debug(msg)
-    elif lvl == WARNING:
-        prntLog.warning(COLOR_W + " WARNING: " + msg + END_COLOR + "\n")
-    elif lvl == ERROR:
-        prntLog.error(COLOR_E + "!ERROR! " + msg + END_COLOR +  "\n")
-    elif lvl == CRITICAL:
-        prntLog.critical(COLOR_C + "!CRITICAL! " + msg + END_COLOR + "\n")
+    prnt_func(prnt_msg)
+    if lvl == CRITICAL:
         sys.exit(0)
 
 import distutils.spawn
@@ -74,7 +83,7 @@ from xml_output import xml_aimless_to_autoproc, XML_INTEGRATION_PART,\
 from xupy import XParam, xdsInp2Param, opWriteCl, saveLastVersion,\
     LP_names, xdsinp_base, SPGlib, Lattice, resum_scaling, get_BravaisToSpgs,\
     get_number_of_processors, EXCLUDE_ICE_RING, gxparm2xpar, getProfilRefPar
-
+from simple_xscale import simple_xscale
 import XIO
 from CChalf_xdsme import CutXDSByCChalf
                              
@@ -397,49 +406,29 @@ class XDSLogParser:
                 raise IOError, "Can't read file: %s" % full_filename
         else:
             self.lp = ""
-        # Catch Errors:
+        # Catch Errors or Warnings:
         _err = self.lp.find(" !!! ") # Add a RE with ERROR or WARNING
-        _err_type = None
-        _err_level = None
         if _err != -1:
-            _err_msg = self.lp[_err:]
-            if _err_msg.count(" CANNOT READ IMAGE "):
-                _err_type = "Some images connot be read"
-                _err_level = WARNING
-            elif _err_msg.count("INSUFFICIENT PERCENTAGE (<"):
-                _err_type = "IDXREF. Percentage of indexed"
-                _err_type += " reflections bellow limit.\n"
-                _err_level = WARNING
-            elif _err_msg.count("ERROR IN REFINE !!! RETURN"):
-                _err_type = "IDXREF. Can't refine cell paramters."
-                _err_level = CRITICAL
-            elif _err_msg.count("USELESS DATA SET"):
-                _err_type = ("INTEGRATE.  USELESS DATA SET." +
-                             " Not enough images or bad diffraction ?")
-                _err_level = CRITICAL
-            elif _err_msg.count("SOLUTION IS INACCURATE"):
-                _err_type = "IDXREF. Solution is inaccurate.\n"
-                _err_level = WARNING
-            elif _err_msg.count("INSUFFICIENT NUMBER OF ACCEPTED SPOTS."):
-                _err_type = "IDXREF. INSUFFICIENT NUMBER OF ACCEPTED SPOTS."
-                _err_level = CRITICAL
-            elif _err_msg.count("CANNOT INDEX REFLECTIONS"):
-                _err_type = "IDXREF. CANNOT INDEX REFLECTIONS."
-                _err_level = CRITICAL
-            elif _err_msg.count("CANNOT CONTINUE WITH A TWO-DIMENSIONAL"):
-                _err_type = "IDXREF. CANNOT INDEX REFLECTIONS."
-                _err_level = CRITICAL
-            elif _err_msg.count("REFINEMENT RESULTS NOT ACCEPTED "):
-                _err_type = ("CORRECT. Diffraction parameters refinement " +
-                             "results not accepted.")
-                _err_level = WARNING
-            else:
-                prnt("\n %s \n" % (self.lp[_err:-1]), CRITICAL)
-        if _err_level in (CRITICAL, ERROR) and raiseErrors:
-            raise XDSExecError, (_err_level, _err_type)
-
-        if self.verbose and _err != -1:
-            prnt(_err_type, _err_level)
+            ERR_LEVELS = {"WARNING": WARNING, "ERROR": ERROR, "CRITICAL": CRITICAL}
+            _err_lp = self.lp[_err:_err+200].splitlines()
+            _err_level, _err_msg = _err_lp[0].split(" !!! ")[1:]
+            _non_critical_err_types = (
+               "INSUFFICIENT PERCENTAGE (<",)
+            _critical_err_types = (
+               "CANNOT INTERPRETE LATTICE BY THE GIVEN UNIT CELL",
+               "INSUFFICIENT NUMBER OF ACCEPTED SPOTS.",
+               "CANNOT INDEX REFLECTIONS",
+               "CANNOT CONTINUE WITH A TWO-DIMENSIONAL")
+            _level = ERR_LEVELS[_err_level]
+            for errstr in _critical_err_types:
+                 if errstr in _err_msg:
+                    _level = CRITICAL
+            for errstr in _non_critical_err_types:
+                 if errstr in _err_msg:
+                    _level = WARNING
+            prnt(_err_msg, _level)
+            if _level in (CRITICAL, ERROR) and raiseErrors:
+                raise XDSExecError, (_level, _err_msg)
 
         if full_filename.count("INIT.LP"):
             self.parse_init()
@@ -702,8 +691,8 @@ class XDSLogParser:
             rdi["Space_group_num"] = gpa(" SPACE_GROUP_NUMBER=", start=st0)            
             rdi["Cell_ref"] = gpa(" UNIT_CELL_CONSTANTS=", start=st0)
             rdi["Mosaicity"] = -1.
-            rdi["det_dist"] = gpa("CRYSTAL TO DETECTOR DISTANCE (mm)")
-            rdi["x_beam"], rdi["y_beam"] = gpa("DETECTOR ORIGIN (PIXELS) AT")
+            rdi["det_dist"] = 0.
+            rdi["x_beam"], rdi["y_beam"] = 0, 0
             rdi["rotation_axis"] = [-1, -1, -1]
             rdi.update(dict(zip(["rvx","rvy","rvz"],[-1,-1,-1])))
             rdi["beam_axis"] = [-1, -1, -1]
@@ -1134,7 +1123,7 @@ class XDS:
                                          run_dir=self.run_dir,
                                          verbose=0, raiseErrors=True).results)
                 except XDSExecError, err:
-                    print "\t\tError in", err
+                    prnt("\t\tError in", ERROR)
         if beam_center_search or beam_center_swap:
             prnt("\n")
             # Need to lookup in the results for the beam-center giving
@@ -1145,7 +1134,7 @@ class XDS:
             if VERBOSE:
                 prnt(best_index_rank)
                 #fmt = "%4i%4i%4i%7.2f%7.2f%8.1f%8.1f%9.5f%9.5f%9.5f"
-                print("best_index_rank %s" % best_index_rank[ranking_mode])
+                prnt("best_index_rank %s" % best_index_rank[ranking_mode])
                 #print "best_origin", fmt % tuple(best_origin)
             if beam_center_search:
                 best_beam = vec3(best_origin[7:10])
@@ -1178,7 +1167,7 @@ class XDS:
         self.inpParam["MAXIMUM_NUMBER_OF_JOBS"] = 1
 
         select_strategy(ridx, self.inpParam)
-        print "\n Starting strategy calculation."
+        prnt("\n Starting strategy calculation.")
         self.inpParam["JOB"] = "IDXREF",
         self.run(rsave=True)
         res = XDSLogParser("IDXREF.LP", run_dir=self.run_dir, verbose=2)
@@ -1325,7 +1314,7 @@ class XDS:
             frame_ID = s["name"].split("?")[0]
             s["hostname"] = os.uname()[1]
             s["osname"] = " ".join(os.uname())
-            s["username"] = "%s" % (os.environ["LOGNAME"])
+            s["username"] = "autoprocessing" #"%s" % (os.environ["LOGNAME"])
             s["cmd_line"] = " ".join(sys.argv).split(".cbf ")[0]
             s["xdsme_version"] = xdsme_version
             s["xds_version"] = xds_version
@@ -1333,11 +1322,13 @@ class XDS:
             s["run_dir"] = os.path.realpath(self.run_dir)
             s["run_dir_p"] = os.path.dirname(s["run_dir"])
             aimless_ID = "%saimless" % frame_ID
-            s["mtz_out"] = "%s.mtz" % aimless_ID
+            s["mtz_out"] = "%s.mtz" % frame_ID[:-1]
+            s["aimlessout"] = "%s.log" % aimless_ID
+            s["xdsmeout"] = "%s.log" % (self.run_dir)
         prnt(s.last_table)
         prnt(FMT_FINAL_STAT % vars(s))
         if s.absent:
-            print FMT_ABSENCES % vars(s)
+            prnt(FMT_ABSENCES % vars(s))
         if self.inpParam["FRIEDEL'S_LAW"] == "FALSE":
             prnt(FMT_ANOMAL % vars(s))
         if s.compl > MINIMAL_COMPL_TO_EXPORT or XML_OUTPUT:
@@ -1351,8 +1342,8 @@ class XDS:
                     xml2 = xml_aimless_to_autoproc(xmlaiml)
                     xml3 = XML_INTEGRATION_PART % res.results
                     xmlo = os.path.join(s["run_dir"], "%sxdsme.xml" % frame_ID)
-                    with open(xmlo, "w") as outputxml:
-                       outputxml.write(XML_TEMPL_MAIN % (xml1 + xml2 + xml3))
+                    opWriteCl(xmlo, XML_TEMPL_MAIN % (xml1 + xml2 + xml3))
+                    simple_xscale(run_dir=self.run_dir)
             if RUN_XDSCONV:
                 run_xdsconv(self.run_dir)
 
@@ -1679,13 +1670,13 @@ if __name__ == "__main__":
 
 
     if len(sys.argv) == 1:
-        print USAGE
+        print(USAGE)
         sys.exit(2)
     try:
         opts, inputf = getopt.getopt(sys.argv[1:], short_opt, long_opt)
     except getopt.GetoptError:
         # print help information and exit:
-        print USAGE
+        print(USAGE)
         sys.exit(2)
 
     STRFTIME = '%a %b %d %X %Z %Y'
@@ -1740,8 +1731,8 @@ if __name__ == "__main__":
             XDS_PATH = a
             xdsf = os.path.join(XDS_PATH, "xds_par")
             if not (os.path.isfile(xdsf) and os.access(xdsf, os.X_OK)):
-                prnt("WARNING: no 'xds_par' exec found in path %s." % XDS_PATH, WARNING)
-                prnt("         Using default $PATH location.", WARNING)
+                print("WARNING: no 'xds_par' exec found in path %s." % XDS_PATH, WARNING)
+                print("         Using default $PATH location.", WARNING)
                 XDS_PATH = ""
             else:
                 os.environ['PATH'] = "%s%s%s" % (XDS_PATH, os.pathsep,
@@ -1768,7 +1759,7 @@ if __name__ == "__main__":
             if os.path.isfile(a):
                 REFERENCE = str(a)
             else:
-                prnt("Can't open reference file %s." % a, CRITICAL)
+                print("Can't open reference file %s." % a, CRITICAL)
         if o in ("-F", "--first-frame"):
             FIRST_FRAME = int(a)
         if o in ("-L", "--last-frame"):
@@ -1784,11 +1775,11 @@ if __name__ == "__main__":
             if os.path.isfile(a):
                 ORIENTATION_MATRIX = str(a)
             else:
-                prnt("Can't open orientation matrix file %s." % a, CRITICAL)
+                print("Can't open orientation matrix file %s." % a, CRITICAL)
         if o in ("-n","--nthreads"):
             NUMBER_OF_PROCESSORS = int(a)
         if o in ("-p", "--project"):
-            PROJECT = str(a)
+            PROJECT = str(a).strip("/").replace("/","_")
         if o in ("-S", "--strategy"):
             STRATEGY = True
         if o in ("-w", "--wavelength"):
@@ -1838,7 +1829,7 @@ if __name__ == "__main__":
         if o == "--invert":
             INVERT = True
         if o in ("-h", "--help"):
-            print USAGE
+            print(USAGE)
             sys.exit(2)
 
     if not inputf:
@@ -1853,13 +1844,13 @@ if __name__ == "__main__":
     else:
         newDir = DIRNAME_PREFIX + PROJECT
 
-    fileHandler = logging.FileHandler("{0}/{1}.log".format("./", newDir))
+    fileHandler = logging.FileHandler("%s.log" % newDir)
     fileHandler.setFormatter(logFormatter)
     prntLog.addHandler(fileHandler)
 
     _linkimages = False
     if not _coll.isContinuous(inputf):
-        prnt("Discontinous naming scheme, creating links.", WARNING)
+        #prnt("Discontinous naming scheme, creating links.", WARNING)
         _linkimages = True
         link_dir_name = "img_links"
         inputf = make_xds_image_links(inputf,
@@ -1867,7 +1858,6 @@ if __name__ == "__main__":
                                     "image")
         #collect.setDirectory(link_dir_name)
         #collect.prefix = prefix
-
     try:
         collect = XIO.Collect(inputf, rotationAxis=INVERT)
         collect.interpretImage()
@@ -1880,8 +1870,6 @@ if __name__ == "__main__":
 
     imgDir = collect.directory
     newPar = collect.export("xds")
-    #import pprint
-    #pprint.pprint(newPar)
     # Update some default values defined by XIO.export_xds:
     # In case no beam origin is defined, take the detector center.
     if newPar["ORGX"] == 0:
@@ -2010,7 +1998,7 @@ if __name__ == "__main__":
     if WARN_MSG:
         prnt(WARN_MSG, WARNING)
     if SPG:
-        print _spg_str
+        prnt(_spg_str)
 
     #newrun.run()
     R1 = R2 = R3 = R4 = R5 = None
