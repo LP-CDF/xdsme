@@ -21,10 +21,12 @@ except:
 def usage():
     print '''
              ###########################################################
-              USAGE: ./LudoXDSplotter.py
+              USAGE: ./XDSplotter_xdsme.py
               Input file : INTEGRATE.LP
 	      Ouptutfile: frames.scales
-	      xdsstat must be in PATH and called by 'xdsstat'
+	      xdsstat must be in PATH and called by:
+	      'xdsstat' for Linux
+	      'xdsstat-i386-mac' for mac
 	     ###########################################################
 	     '''
     sys.exit()
